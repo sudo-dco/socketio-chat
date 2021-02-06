@@ -16,6 +16,12 @@
         </style>
     </head>
     <body>
+        <div>
+            <button id="create">Create</button>
+            <button id="join">Join</button>
+            <p>Room ID:</p>
+            <input type="text" id="roomid"/>
+        </div>
         <ul id="messages"></ul>
         <div id="typing" style="position:absolute;bottom:12%"></div>
         <form id="form" action="">
@@ -33,9 +39,18 @@
         let name = document.getElementById('username');
         let typing = document.getElementById('typing');
 
+        // rooms vars
+        let createBtn = document.getElementById("create");
+        let joinBtn = document.getElementById("join");
+        let roomDisplay = document.getElementById("roomid");
+
         socket.on("connect", () => {
-            name.value = socket.id;
+            // name.value = socket.id.slice(0,6);
+            socket.emit("set username", name.value);
         })
+
+        // messages
+        name.value = `user${Math.floor(Math.random() * 10000) + 1}`;
 
         const addMessage = (msg, name) => {
             var item = document.createElement('li');
@@ -48,11 +63,15 @@
             e.preventDefault();
 
             if (input.value) {
-                socket.emit('chat message', input.value, name.value);
+                // socket.emit('chat message', input.value, name.value);
 
-                socket.emit("stop typing");
+                // socket.emit("stop typing");
 
-                addMessage(input.value, name.value);
+                // addMessage(input.value, name.value);
+
+                // input.value = '';
+
+                socket.emit("chat message", input.value, name.value, roomDisplay.value);
 
                 input.value = '';
             }
@@ -60,13 +79,13 @@
 
         input.addEventListener('input', (e) => {
             if (e.target.value.length > 0) {
-                socket.emit("user typing", name.value);
+                socket.emit("user typing", name.value, roomDisplay.value);
             }
 
             if (e.target.value.length === 0) {
-                socket.emit("stop typing");
+                socket.emit("stop typing", roomDisplay.value);
             }
-        })  
+        })
 
         socket.on('chat message', (msg, name) => {
             addMessage(msg, name);
@@ -79,5 +98,30 @@
         socket.on("stop typing", () => {
             typing.textContent = "";
         })
+
+        // rooms
+        createBtn.addEventListener('click', async (e) => {
+            const res = await fetch("/create", { method: "GET" })
+            
+            // console.log(await res.json());
+            const id = await res.json();
+
+            socket.emit("create room", name.value, id);
+
+            roomDisplay.value = id;
+        });
+
+        joinBtn.addEventListener('click', async (e) => {
+            if (roomDisplay.value === "") {
+                alert("enter a valid room id");
+            } else {
+                socket.emit("join room", name.value, roomDisplay.value);
+            }
+        })
+
+        socket.on("room message", (msg, name) => {
+
+        })
+        
         </script>
 </html>
